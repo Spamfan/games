@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Tic-Tac-Toe v2.2 - Ultimate & True 3D</title>
+    <style>
+        :root {
+            --bg-color: #0d0e15;
+            --panel-bg: #121214;
+            --text-color: #ffffff;
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --btn-glow: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-main); }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            overflow-y: auto; 
+            overflow-x: hidden;
+            padding-bottom: 50px;
+        }
+
+        /* Full Screen Menus */
+        #setup-wizard, #main-menu {
+            position: absolute; inset: 0;
+            background: var(--bg-color);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px; 
+            overflow-y: auto;
+        }
+
+        .step {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            animation: fadeIn 0.3s ease forwards;
+        }
+        .step.active { display: flex; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1, h2 { text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; text-shadow: 0 0 10px rgba(255,255,255,0.3); text-align: center;}
+
+        .name-input {
+            width: 90%; background: transparent; border: none; border-bottom: 2px solid #555;
+            color: #fff; font-size: 2.5rem; text-align: center; padding: 10px; margin-bottom: 30px;
+            outline: none; transition: border-color 0.3s;
+        }
+        .name-input:focus { border-bottom-color: #fff; }
+
+        .color-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+            width: 100%; max-width: 400px; margin-bottom: 20px;
+        }
+
+        .color-preset {
+            background: #000; border: 2px solid var(--c); color: #fff; padding: 20px 10px;
+            border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; box-shadow: 0 0 15px transparent; transition: all 0.2s ease;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .color-preset:hover { background: var(--c); color: #000; box-shadow: 0 0 15px var(--c); }
+
+        button {
+            background: transparent; color: #fff; border: 2px solid #555;
+            padding: 15px 30px; border-radius: 5px; cursor: pointer;
+            text-transform: uppercase; font-weight: bold; font-size: 1rem;
+            transition: all 0.2s ease; margin: 5px; flex: 1;
+        }
+        button:hover:not(:disabled) { border-color: var(--btn-glow); box-shadow: 0 0 15px var(--btn-glow); }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Normal flow navigation buttons to stay above keyboard */
+        .step-nav-buttons {
+            display: flex; width: 100%; max-width: 400px; gap: 10px; margin-top: 20px;
+        }
+
+        .review-panel { background: var(--panel-bg); padding: 20px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; width: 100%; max-width: 400px; }
+        .editable { cursor: pointer; transition: transform 0.2s; padding: 10px; border-radius: 5px; }
+        .editable:hover { background: rgba(255,255,255,0.05); transform: scale(1.05); }
+        .color-swatch { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-left: 10px; vertical-align: middle; border: 1px solid #fff; }
+
+        /* Menu overrides */
+        #main-menu { z-index: 1500; justify-content: flex-start; padding-top: 80px; }
+        .menu-panel { background: var(--panel-bg); padding: 30px; border-radius: 10px; border: 1px solid #333; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px; }
+        .menu-btn { width: 100%; padding: 20px; font-size: 1.2rem; }
+
+        /* App & Header */
+        #app-container {
+            display: none; flex-direction: column; align-items: center;
+            width: 100%; max-width: 500px; padding: 15px; margin-top: 20px;
+        }
+        
+        .header-panel {
+            width: 100%; display: flex; justify-content: space-between;
+            background: var(--panel-bg); padding: 15px; border-radius: 10px;
+            margin-bottom: 20px; border: 1px solid #222;
+        }
+        .score-box { text-align: center; }
+        .score-val { font-size: 1.5rem; font-weight: bold; margin-top: 5px; color: #fff;}
+        .editable-header { cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 5px; border-radius: 5px; transition: background 0.2s;}
+        .editable-header:hover { background: rgba(255,255,255,0.05); }
+        .edit-icon { width: 16px; height: 16px; fill: #888; margin-left: 5px; vertical-align: middle; }
+        .editable-header:hover .edit-icon { fill: #fff; }
+
+        #turn-indicator { font-size: 1.3rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s; color: #fff; text-align: center; }
+
+        /* Standard Board */
+        .board { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 380px; aspect-ratio: 1; margin-bottom: 25px; }
+        .cell { background: var(--panel-bg); border: 2px solid #222; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: clamp(3rem, 15vw, 6rem); line-height: 1; cursor: pointer; transition: all 0.2s ease; user-select: none; color: #ffffff; overflow: hidden; aspect-ratio: 1; }
+        .cell:hover:empty { background: #1a1b26; }
+        .flashing { animation: flashNeon 0.8s infinite alternate; }
+
+        @keyframes flashNeon { 0% { filter: brightness(1); transform: scale(1); } 100% { filter: brightness(1.5); transform: scale(1.05); } }
+
+        /* Ultimate Board */
+        .ultimate-board { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 8px; width: 100%; max-width: 450px; aspect-ratio: 1; margin-bottom: 25px; }
+        .macro-cell { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 2px; background: #333; border: 3px solid #222; padding: 4px; border-radius: 8px; position: relative; transition: all 0.3s ease; aspect-ratio: 1; }
+        .macro-cell.active-macro { border-color: #fff; box-shadow: 0 0 15px #fff; background: #444; }
+        .macro-cell.won::after { content: attr(data-winner); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 4rem; background: rgba(18,18,20,0.85); border-radius: 4px; text-shadow: inherit; }
+        .micro-cell { background: var(--panel-bg); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; color: #fff; border-radius: 2px; width: 100%; height: 100%; aspect-ratio: 1; }
+        .micro-cell:hover:empty { background: #1a1b26; }
+
+        /* True 3D Board */
+        .threed-wrapper { width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        .scene { perspective: 1200px; width: 260px; height: 260px; margin: 10px auto 30px; cursor: grab; touch-action: none; position: relative; }
+        .scene:active { cursor: grabbing; }
+        .board-3d { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transform: scale(var(--s, 1)) rotateX(var(--rx, -20deg)) rotateY(var(--ry, -30deg)); }
+        
+        .cube { position: absolute; width: 60px; height: 60px; left: 50%; top: 50%; margin-left: -30px; margin-top: -30px; transform-style: preserve-3d; cursor: pointer; }
+        
+        .face { position: absolute; width: 100%; height: 100%; background: rgba(18,18,20,0.2); border: 2px solid rgba(255,255,255,0.1); transition: border-color 0.2s, box-shadow 0.2s; }
+        .face.front  { transform: translateZ(30px); }
+        .face.back   { transform: rotateY(180deg) translateZ(30px); }
+        .face.right  { transform: rotateY(90deg) translateZ(30px); }
+        .face.left   { transform: rotateY(-90deg) translateZ(30px); }
+        .face.top    { transform: rotateX(90deg) translateZ(30px); }
+        .face.bottom { transform: rotateX(-90deg) translateZ(30px); }
+        
+        .cube.active-layer .face { border-color: rgba(255,255,0,0.8); box-shadow: inset 0 0 15px rgba(255, 255, 0, 0.3), 0 0 10px rgba(255, 255, 0, 0.2); background: rgba(255,255,0,0.05);}
+        .cube.flashing .face { animation: flashNeon 0.8s infinite alternate; }
+
+        .billboard { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #fff; transform: rotateY(calc(-1 * var(--ry, -30deg))) rotateX(calc(-1 * var(--rx, -20deg))); pointer-events: none; z-index: 10; font-weight: bold; }
+
+        .active-slice-container { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+        .slice-title { font-size: 1.1rem; margin-bottom: 10px; color: yellow; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,255,0,0.5);}
+        .slice-grid { width: 180px; aspect-ratio: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 5px; background: #333; border: 3px solid yellow; padding: 5px; border-radius: 8px; box-shadow: 0 0 20px rgba(255,255,0,0.2);}
+        .slice-cell { background: var(--panel-bg); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; cursor: pointer; color: #fff; width: 100%; height: 100%; aspect-ratio: 1;}
+        .slice-cell:hover:empty { background: #1a1b26; }
+
+        .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; margin-top: 10px;}
+        
+        /* Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center; z-index: 3000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(5px); }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: var(--panel-bg); padding: 30px; border-radius: 10px; border: 1px solid #333; text-align: center; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+        
+        #live-edit-colors { grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        #live-edit-colors .color-preset { padding: 12px 5px; font-size: 0.9rem; }
+        
+        .svg-pencil-path { d: path('M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'); }
+    </style>
+</head>
+<body>
+
+    <div id="setup-wizard">
+        <div class="step active" id="step-1">
+            <h1>Player 1 (X) Name</h1>
+            <input type="text" id="p1-name" class="name-input" placeholder="Player 1" autocomplete="off">
+            <div class="step-nav-buttons">
+                <button onclick="goBack()" style="border-color: #333; color: #888; visibility: hidden;">Back</button>
+                <button onclick="handleTopNavNext()" style="--btn-glow: #00ffff; border-color: #00ffff;">Next</button>
+            </div>
+        </div>
+        <div class="step" id="step-2">
+            <h1 id="p1-color-title">Player 1 Color</h1>
+            <div class="color-grid" id="p1-colors"></div>
+            <div class="step-nav-buttons">
+                <button onclick="goBack()" style="border-color: #333; color: #888;">Back</button>
+                <button onclick="handleTopNavNext()" style="--btn-glow: #00ffff; border-color: #00ffff;">Next</button>
+            </div>
+        </div>
+        <div class="step" id="step-3">
+            <h1>Player 2 (O) Name</h1>
+            <input type="text" id="p2-name" class="name-input" placeholder="Player 2" autocomplete="off">
+            <div class="step-nav-buttons">
+                <button onclick="goBack()" style="border-color: #333; color: #888;">Back</button>
+                <button onclick="handleTopNavNext()" style="--btn-glow: #00ffff; border-color: #00ffff;">Next</button>
+            </div>
+        </div>
+        <div class="step" id="step-4">
+            <h1 id="p2-color-title">Player 2 Color</h1>
+            <div class="color-grid" id="p2-colors"></div>
+            <div class="step-nav-buttons">
+                <button onclick="goBack()" style="border-color: #333; color: #888;">Back</button>
+                <button onclick="handleTopNavNext()" style="--btn-glow: #00ffff; border-color: #00ffff;">Next</button>
+            </div>
+        </div>
+        <div class="step" id="step-5">
+            <h1>Match Review</h1>
+            <p style="color:#aaa; font-size:0.9rem; margin-bottom: 10px;">Tap a name or color to edit</p>
+            <div class="review-panel">
+                <div class="editable" onclick="editSetup(1)">
+                    <h2 id="review-p1-name" style="margin:0; display:inline-block; color: #fff;"></h2>
+                </div>
+                <div class="editable" onclick="editSetup(2)">
+                    <span style="color:#888;">Color:</span> <div id="review-p1-swatch" class="color-swatch"></div>
+                </div>
+                <h2 style="color:#555; font-size:1rem; margin: 15px 0;">VERSUS</h2>
+                <div class="editable" onclick="editSetup(3)">
+                    <h2 id="review-p2-name" style="margin:0; display:inline-block; color: #fff;"></h2>
+                </div>
+                <div class="editable" onclick="editSetup(4)">
+                    <span style="color:#888;">Color:</span> <div id="review-p2-swatch" class="color-swatch"></div>
+                </div>
+            </div>
+            <div class="step-nav-buttons">
+                <button onclick="goBack()" style="border-color: #333; color: #888;">Back</button>
+                <button onclick="handleTopNavNext()" style="--btn-glow: #00ffff; border-color: #00ffff;">Select Mode</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-menu" style="display: none;">
+        <h1 style="margin-top: 20px;">Select Game Mode</h1>
+        <div class="menu-panel">
+            <button class="menu-btn" onclick="enterGame('standard')" style="border-color:#00ffff; --btn-glow:#00ffff;">Standard (3x3)</button>
+            <button class="menu-btn" onclick="enterGame('ultimate')" style="border-color:#ff00ff; --btn-glow:#ff00ff;">Ultimate (9x9)</button>
+            <button class="menu-btn" onclick="enterGame('3d')" style="border-color:#39ff14; --btn-glow:#39ff14;">3D Stack (3x3x3)</button>
+        </div>
+        <button onclick="goToSetupFromMenu()" style="border-color: #333; color: #888; width: 90%; max-width: 400px;">Back to Setup</button>
+    </div>
+
+    <div id="app-container">
+        <div class="header-panel">
+            <div class="score-box">
+                <div id="p1-label-container" class="editable-header" onclick="openLiveEdit('X')">
+                    <span id="p1-label" style="color: #fff;">P1</span>
+                    <svg class="edit-icon" viewBox="0 0 24 24"><path class="svg-pencil-path"></path></svg>
+                </div>
+                <div class="score-val" id="p1-score">0</div>
+            </div>
+            <div class="score-box">
+                <div style="color: #666;">TIES</div>
+                <div class="score-val" id="tie-score">0</div>
+            </div>
+            <div class="score-box">
+                <div id="p2-label-container" class="editable-header" onclick="openLiveEdit('O')">
+                    <span id="p2-label" style="color: #fff;">P2</span>
+                    <svg class="edit-icon" viewBox="0 0 24 24"><path class="svg-pencil-path"></path></svg>
+                </div>
+                <div class="score-val" id="p2-score">0</div>
+            </div>
+        </div>
+
+        <div id="turn-indicator">System Booting...</div>
+
+        <div class="board" id="board-standard">
+            <div class="cell" onclick="handleCellClickStandard(0)"></div><div class="cell" onclick="handleCellClickStandard(1)"></div><div class="cell" onclick="handleCellClickStandard(2)"></div>
+            <div class="cell" onclick="handleCellClickStandard(3)"></div><div class="cell" onclick="handleCellClickStandard(4)"></div><div class="cell" onclick="handleCellClickStandard(5)"></div>
+            <div class="cell" onclick="handleCellClickStandard(6)"></div><div class="cell" onclick="handleCellClickStandard(7)"></div><div class="cell" onclick="handleCellClickStandard(8)"></div>
+        </div>
+
+        <div id="board-ultimate" class="ultimate-board"></div>
+
+        <div id="board-3d" class="threed-wrapper">
+            <div class="scene" id="threed-scene">
+                <div class="board-3d" id="threed-cube"></div>
+            </div>
+            <div class="active-slice-container" id="threed-slice-container">
+                <div class="slice-title" id="active-slice-title">Middle Layer</div>
+                <div class="slice-grid" id="active-slice-grid"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-undo" onclick="undo()">Undo</button>
+            <button id="btn-redo" onclick="redo()">Redo</button>
+            <button id="btn-restart" onclick="requestRestart()">Restart</button>
+            <button id="btn-menu" onclick="requestChangeMode()" style="border-color: #ff3333; color: #ff3333;">Change Mode</button>
+        </div>
+    </div>
+
+    <div id="win-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h1 id="win-message" style="color: #fff;">Winner!</h1>
+            <button onclick="playAgain()" style="border-color: #fff; width: 100%;">Play Again</button>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="confirm-message">Are you sure?</h3>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="closeConfirmModal()">Cancel</button>
+                <button id="confirm-yes" style="border-color: #ff3333; color: #ff3333; --btn-glow: #ff3333;">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="live-edit-modal" class="modal-overlay">
+        <div class="modal-content" style="padding-top: 15px;">
+            <h2 id="live-edit-title" style="margin-bottom: 15px; font-size: 1.2rem;">Edit Player</h2>
+            <input type="text" id="live-edit-name" class="name-input" style="font-size: 1.5rem; margin-bottom: 20px;">
+            <div class="color-grid" id="live-edit-colors"></div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeLiveEdit()" style="border-color: #333; color: #888;">Cancel</button>
+                <button onclick="saveLiveEdit()" style="--btn-glow: #00ffff; border-color: #00ffff;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- PRESETS & DATA ---
+        const neonPalettes = [
+            { name: 'Cyan', hex: '#00ffff' }, { name: 'Pink', hex: '#ff00ff' },
+            { name: 'Lime', hex: '#39ff14' }, { name: 'Orange', hex: '#ff5f00' },
+            { name: 'Cobalt', hex: '#0044ff' }, { name: 'Crimson', hex: '#ff003c' }
+        ];
+
+        let players = { X: { name: '', color: '#00ffff' }, O: { name: '', color: '#ff00ff' } };
+        let scores = { X: 0, O: 0, Ties: 0 };
+        let gameMode = 'standard'; 
+        
+        let currentStep = 1;
+        let returnToReview = false;
+        let editingPlayerKey = null;
+
+        // --- HISTORY API & WIZARD NAVIGATION ---
+        window.history.replaceState({ view: 'setup', step: 1 }, '', '');
+
+        window.addEventListener('popstate', (e) => {
+            if (e.state) {
+                if (e.state.view === 'setup') {
+                    document.getElementById('main-menu').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'none';
+                    document.getElementById('setup-wizard').style.display = 'flex';
+                    renderStep(e.state.step);
+                } else if (e.state.view === 'menu') {
+                    document.getElementById('setup-wizard').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'none';
+                    document.getElementById('main-menu').style.display = 'flex';
+                } else if (e.state.view === 'game') {
+                    enterGame(e.state.mode, false);
+                }
+            } else {
+                history.replaceState({ view: 'setup', step: 1 }, '', '');
+                renderStep(1);
+            }
+        });
+
+        function goBack() { window.history.back(); }
+
+        function handleTopNavNext() {
+            if (currentStep === 5) showMainMenu(true);
+            else handleNextClick(currentStep);
+        }
+
+        function buildColorGrids() {
+            const grids = ['p1-colors', 'p2-colors', 'live-edit-colors'];
+            neonPalettes.forEach(color => {
+                document.getElementById(grids[0]).innerHTML += `<button class="color-preset" style="--c: ${color.hex}" onclick="selectColor('X', '${color.hex}')">${color.name}</button>`;
+                document.getElementById(grids[1]).innerHTML += `<button class="color-preset" style="--c: ${color.hex}" onclick="selectColor('O', '${color.hex}')">${color.name}</button>`;
+                document.getElementById(grids[2]).innerHTML += `<button class="color-preset" style="--c: ${color.hex}" onclick="setLiveEditColor('${color.hex}')">${color.name}</button>`;
+            });
+        }
+        buildColorGrids();
+
+        function handleNextClick(step) { 
+            if (returnToReview) { 
+                returnToReview = false; 
+                window.history.pushState({ view: 'setup', step: 5 }, '', '');
+                renderStep(5); 
+            } else { 
+                window.history.pushState({ view: 'setup', step: step + 1 }, '', '');
+                renderStep(step + 1); 
+            } 
+        }
+        
+        function renderStep(step) {
+            currentStep = step;
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            
+            if (step === 2) document.getElementById('p1-color-title').innerText = `${document.getElementById('p1-name').value || 'Player 1'}'s Color`;
+            if (step === 4) document.getElementById('p2-color-title').innerText = `${document.getElementById('p2-name').value || 'Player 2'}'s Color`;
+            if (step === 5) populateReview();
+            if (step === 1) document.getElementById('p1-name').focus();
+            if (step === 3) document.getElementById('p2-name').focus();
+        }
+
+        function selectColor(playerKey, hex) {
+            players[playerKey].color = hex;
+            if (returnToReview) { 
+                returnToReview = false; 
+                window.history.pushState({ view: 'setup', step: 5 }, '', '');
+                renderStep(5); 
+            } else { 
+                if (playerKey === 'X') {
+                    window.history.pushState({ view: 'setup', step: 3 }, '', '');
+                    renderStep(3);
+                }
+                if (playerKey === 'O') {
+                    window.history.pushState({ view: 'setup', step: 5 }, '', '');
+                    renderStep(5);
+                }
+            }
+        }
+
+        function editSetup(step) { 
+            returnToReview = true; 
+            window.history.pushState({ view: 'setup', step: step }, '', '');
+            renderStep(step); 
+        }
+
+        function populateReview() {
+            players.X.name = document.getElementById('p1-name').value || 'Player 1';
+            players.O.name = document.getElementById('p2-name').value || 'Player 2';
+            const setupReview = (idPrefix, p) => {
+                const el = document.getElementById(`review-${idPrefix}-name`);
+                el.innerText = `${players[p].name} (${p})`;
+                el.style.textShadow = `0 0 10px ${players[p].color}, 0 0 20px ${players[p].color}`;
+                document.getElementById(`review-${idPrefix}-swatch`).style.backgroundColor = players[p].color;
+                document.getElementById(`review-${idPrefix}-swatch`).style.boxShadow = `0 0 10px ${players[p].color}`;
+            };
+            setupReview('p1', 'X'); setupReview('p2', 'O');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (document.getElementById('live-edit-modal').classList.contains('active')) saveLiveEdit();
+                else if (document.getElementById('setup-wizard').style.display !== 'none' && (currentStep === 1 || currentStep === 3)) handleTopNavNext();
+            }
+        });
+
+        setTimeout(() => document.getElementById('p1-name').focus(), 100);
+
+        function showMainMenu(push = true) {
+            if(push) window.history.pushState({ view: 'menu' }, '', '');
+            document.getElementById('setup-wizard').style.display = 'none';
+            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+        }
+        
+        function goToSetupFromMenu() {
+            window.history.back();
+        }
+
+        function enterGame(mode, push = true) {
+            gameMode = mode;
+            scores = { X: 0, O: 0, Ties: 0 }; 
+            if(push) window.history.pushState({ view: 'game', mode: mode }, '', '');
+            
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+            document.getElementById('board-standard').style.display = mode === 'standard' ? 'grid' : 'none';
+            document.getElementById('board-ultimate').style.display = mode === 'ultimate' ? 'grid' : 'none';
+            document.getElementById('board-3d').style.display = mode === '3d' ? 'flex' : 'none';
+            
+            if (mode === 'ultimate') buildUltimateDOM();
+            if (mode === '3d') build3DDOM();
+            initBoardState();
+        }
+
+        // --- CORE GAME STATE & LOGIC ---
+        let historyData = []; 
+        let currentMoveIndex = 0;
+        let isGameOver = false;
+        
+        const winCombos = [[0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [2,4,6]];
+        const winCombos3D = [];
+        const idx3d = (x,y,z) => z*9 + y*3 + x;
+        for(let i=0; i<3; i++) {
+            for(let j=0; j<3; j++) {
+                winCombos3D.push([idx3d(0,i,j), idx3d(1,i,j), idx3d(2,i,j)]);
+                winCombos3D.push([idx3d(i,0,j), idx3d(i,1,j), idx3d(i,2,j)]);
+                winCombos3D.push([idx3d(i,j,0), idx3d(i,j,1), idx3d(i,j,2)]);
+            }
+            winCombos3D.push([idx3d(0,0,i), idx3d(1,1,i), idx3d(2,2,i)]);
+            winCombos3D.push([idx3d(2,0,i), idx3d(1,1,i), idx3d(0,2,i)]);
+            winCombos3D.push([idx3d(0,i,0), idx3d(1,i,1), idx3d(2,i,2)]);
+            winCombos3D.push([idx3d(2,i,0), idx3d(1,i,1), idx3d(0,i,2)]);
+            winCombos3D.push([idx3d(i,0,0), idx3d(i,1,1), idx3d(i,2,2)]);
+            winCombos3D.push([idx3d(i,2,0), idx3d(i,1,1), idx3d(i,0,2)]);
+        }
+        winCombos3D.push([idx3d(0,0,0), idx3d(1,1,1), idx3d(2,2,2)]);
+        winCombos3D.push([idx3d(2,0,0), idx3d(1,1,1), idx3d(0,2,2)]);
+        winCombos3D.push([idx3d(0,2,0), idx3d(1,1,1), idx3d(2,0,2)]);
+        winCombos3D.push([idx3d(0,0,2), idx3d(1,1,1), idx3d(2,2,0)]);
+
+        function buildUltimateDOM() {
+            const container = document.getElementById('board-ultimate');
+            container.innerHTML = '';
+            for(let m=0; m<9; m++) {
+                const macro = document.createElement('div'); macro.className = 'macro-cell';
+                for(let i=0; i<9; i++) {
+                    const micro = document.createElement('div'); micro.className = 'micro-cell';
+                    micro.onclick = () => handleCellClickUltimate(m, i);
+                    macro.appendChild(micro);
+                }
+                container.appendChild(macro);
+            }
+        }
+
+        let activeLayer3D = 1; 
+        const layerNames = ['Top Layer', 'Middle Layer', 'Bottom Layer'];
+
+        function build3DDOM() {
+            const board3d = document.getElementById('threed-cube');
+            const sliceGrid = document.getElementById('active-slice-grid');
+            board3d.innerHTML = ''; sliceGrid.innerHTML = '';
+            activeLayer3D = 1;
+            
+            const spacing = 75; 
+
+            for(let i=0; i<27; i++) {
+                const l = Math.floor(i / 9); 
+                const rem = i % 9;
+                const r = Math.floor(rem / 3); 
+                const c = rem % 3; 
+
+                const x = (c - 1) * spacing;
+                const y = (l - 1) * spacing; 
+                const z = (r - 1) * spacing;
+
+                const cube = document.createElement('div');
+                cube.className = 'cube';
+                cube.style.transform = `translate3d(${x}px, ${y}px, ${z}px)`;
+                cube.onclick = () => handleLayerSelect(l);
+
+                const faces = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+                faces.forEach(f => {
+                    const face = document.createElement('div');
+                    face.className = `face ${f}`;
+                    cube.appendChild(face);
+                });
+
+                const billboard = document.createElement('div');
+                billboard.className = 'billboard';
+                cube.appendChild(billboard);
+
+                board3d.appendChild(cube);
+            }
+            
+            for(let i=0; i<9; i++) {
+                const sliceCell = document.createElement('div'); sliceCell.className = 'slice-cell';
+                sliceCell.onclick = () => handleCellClick3D(activeLayer3D * 9 + i);
+                sliceGrid.appendChild(sliceCell);
+            }
+        }
+
+        function initBoardState() {
+            let initialState = { currentPlayer: 'X' };
+            if (gameMode === 'standard') initialState.board = Array(9).fill(null);
+            else if (gameMode === '3d') initialState.board = Array(27).fill(null);
+            else if (gameMode === 'ultimate') {
+                initialState.ultimateBoard = Array(9).fill(null).map(() => Array(9).fill(null));
+                initialState.macroBoard = Array(9).fill(null);
+                initialState.activeMacro = null;
+            }
+            historyData = [initialState];
+            currentMoveIndex = 0; isGameOver = false;
+            document.querySelectorAll('.flashing').forEach(el => el.classList.remove('flashing'));
+            updateUI();
+        }
+
+        function handleCellClickStandard(index) {
+            if (isGameOver) return;
+            const state = historyData[currentMoveIndex];
+            if (state.board[index]) return; 
+
+            historyData = historyData.slice(0, currentMoveIndex + 1);
+            const newState = JSON.parse(JSON.stringify(state));
+            newState.board[index] = newState.currentPlayer;
+            newState.currentPlayer = newState.currentPlayer === 'X' ? 'O' : 'X';
+            historyData.push(newState); currentMoveIndex++;
+            updateUI(); checkWin(newState.board, winCombos);
+        }
+
+        function handleCellClickUltimate(m, i) {
+            if (isGameOver) return;
+            const state = historyData[currentMoveIndex];
+            if (state.macroBoard[m] || state.ultimateBoard[m][i]) return;
+            if (state.activeMacro !== null && state.activeMacro !== m && !state.macroBoard[state.activeMacro]) return;
+
+            historyData = historyData.slice(0, currentMoveIndex + 1);
+            const newState = JSON.parse(JSON.stringify(state));
+            newState.ultimateBoard[m][i] = newState.currentPlayer;
+
+            const mWinner = getWinner(newState.ultimateBoard[m], winCombos);
+            if (mWinner) newState.macroBoard[m] = mWinner;
+
+            newState.activeMacro = newState.macroBoard[i] ? null : i;
+            newState.currentPlayer = newState.currentPlayer === 'X' ? 'O' : 'X';
+            historyData.push(newState); currentMoveIndex++;
+            updateUI(); checkWin(newState.macroBoard, winCombos, true);
+        }
+
+        function handleLayerSelect(l) {
+            if (wasDragging) return;
+            activeLayer3D = l;
+            updateUI();
+        }
+
+        function handleCellClick3D(index) {
+            if (isGameOver) return;
+            const state = historyData[currentMoveIndex];
+            if (state.board[index]) return;
+
+            historyData = historyData.slice(0, currentMoveIndex + 1);
+            const newState = JSON.parse(JSON.stringify(state));
+            newState.board[index] = newState.currentPlayer;
+            newState.currentPlayer = newState.currentPlayer === 'X' ? 'O' : 'X';
+            historyData.push(newState); currentMoveIndex++;
+            updateUI(); checkWin(newState.board, winCombos3D);
+        }
+
+        function getWinner(board, combos) {
+            for (let combo of combos) {
+                const [a, b, c] = combo;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+            }
+            if (!board.includes(null)) return 'Tie';
+            return null;
+        }
+
+        function checkWin(board, combos, isUltimateGlobal = false) {
+            let winner = null, winningCombo = [];
+            for (let combo of combos) {
+                const [a, b, c] = combo;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    winner = board[a]; winningCombo = combo; break;
+                }
+            }
+            if (!winner && !board.includes(null)) winner = 'Tie';
+            if (winner) { isGameOver = true; handleGameOver(winner, winningCombo, isUltimateGlobal); }
+        }
+
+        function styleCell(el, p, isCube = false) {
+            if (isCube) {
+                const billboard = el.querySelector('.billboard');
+                billboard.innerText = p || ''; billboard.style.color = ''; billboard.style.textShadow = '';
+                el.querySelectorAll('.face').forEach(f => { f.style.borderColor = ''; f.style.boxShadow = ''; });
+
+                if (p && players[p]) {
+                    const color = players[p].color;
+                    billboard.style.color = '#ffffff';
+                    billboard.style.textShadow = `0 0 5px ${color}, 0 0 15px ${color}, 0 0 30px ${color}`;
+                    el.querySelectorAll('.face').forEach(f => {
+                        f.style.borderColor = color;
+                        f.style.boxShadow = `inset 0 0 15px ${color}40`;
+                    });
+                }
+            } else {
+                el.innerText = p || ''; el.style = '';
+                if (p && players[p]) {
+                    const color = players[p].color;
+                    el.style.color = '#ffffff';
+                    el.style.textShadow = `0 0 5px ${color}, 0 0 15px ${color}, 0 0 30px ${color}`;
+                    el.style.boxShadow = `inset 0 0 15px ${color}40`;
+                    el.style.borderColor = color;
+                }
+            }
+        }
+
+        function updateUI() {
+            const state = historyData[currentMoveIndex];
+            const activePlayer = players[state.currentPlayer];
+
+            if (gameMode === 'standard') {
+                const cells = document.querySelectorAll('#board-standard .cell');
+                cells.forEach((cell, i) => styleCell(cell, state.board[i]));
+            } else if (gameMode === 'ultimate') {
+                const macros = document.querySelectorAll('.macro-cell');
+                macros.forEach((mCell, m) => {
+                    mCell.className = 'macro-cell'; mCell.removeAttribute('data-winner'); mCell.style.color = '';
+                    if (!isGameOver && (state.activeMacro === null || state.activeMacro === m) && !state.macroBoard[m]) {
+                        mCell.classList.add('active-macro');
+                    }
+                    if (state.macroBoard[m] && state.macroBoard[m] !== 'Tie') {
+                        mCell.classList.add('won'); mCell.setAttribute('data-winner', state.macroBoard[m]);
+                        mCell.style.color = players[state.macroBoard[m]].color;
+                        mCell.style.textShadow = `0 0 10px ${players[state.macroBoard[m]].color}`;
+                    }
+                    const micros = mCell.querySelectorAll('.micro-cell');
+                    micros.forEach((uCell, i) => styleCell(uCell, state.ultimateBoard[m][i]));
+                });
+            } else if (gameMode === '3d') {
+                const cubes = document.querySelectorAll('.cube');
+                cubes.forEach((cube, i) => {
+                    const l = Math.floor(i / 9);
+                    cube.classList.toggle('active-layer', l === activeLayer3D);
+                    styleCell(cube, state.board[i], true);
+                });
+                
+                document.getElementById('active-slice-title').innerText = layerNames[activeLayer3D];
+                
+                const sliceCells = document.querySelectorAll('.slice-cell');
+                for(let i=0; i<9; i++) { 
+                    const globalIdx = activeLayer3D * 9 + i;
+                    styleCell(sliceCells[i], state.board[globalIdx]); 
+                    sliceCells[i].onclick = () => handleCellClick3D(globalIdx);
+                }
+            }
+
+            document.getElementById('p1-label').innerText = players.X.name; document.getElementById('p1-label').style.textShadow = `0 0 10px ${players.X.color}`;
+            document.getElementById('p2-label').innerText = players.O.name; document.getElementById('p2-label').style.textShadow = `0 0 10px ${players.O.color}`;
+
+            if (!isGameOver) {
+                const indicator = document.getElementById('turn-indicator');
+                indicator.innerText = `${activePlayer.name}'s Turn`;
+                indicator.style.textShadow = `0 0 10px ${activePlayer.color}, 0 0 20px ${activePlayer.color}`;
+            }
+
+            document.getElementById('btn-undo').disabled = currentMoveIndex === 0;
+            document.getElementById('btn-redo').disabled = currentMoveIndex === historyData.length - 1;
+            document.getElementById('p1-score').innerText = scores.X; document.getElementById('p2-score').innerText = scores.O; document.getElementById('tie-score').innerText = scores.Ties;
+            document.getElementById('p1-name').value = players.X.name; document.getElementById('p2-name').value = players.O.name;
+        }
+
+        function undo() { if (currentMoveIndex > 0) { currentMoveIndex--; isGameOver = false; document.querySelectorAll('.flashing').forEach(el => el.classList.remove('flashing')); updateUI(); } }
+        function redo() { if (currentMoveIndex < historyData.length - 1) { currentMoveIndex++; updateUI(); 
+            if(gameMode === 'standard') checkWin(historyData[currentMoveIndex].board, winCombos);
+            else if(gameMode === '3d') checkWin(historyData[currentMoveIndex].board, winCombos3D);
+            else checkWin(historyData[currentMoveIndex].macroBoard, winCombos, true);
+        } }
+
+        function handleGameOver(winner, combo, isUltimateGlobal) {
+            const msg = document.getElementById('win-message');
+            if (winner === 'Tie') {
+                scores.Ties++; msg.innerText = "Draw!"; msg.style.textShadow = '0 0 10px #fff';
+            } else {
+                scores[winner]++; msg.innerText = `${players[winner].name} Wins!`;
+                msg.style.textShadow = `0 0 10px ${players[winner].color}, 0 0 20px ${players[winner].color}`;
+                
+                if (combo && combo.length) {
+                    if (gameMode === 'standard') combo.forEach(i => document.querySelectorAll('#board-standard .cell')[i].classList.add('flashing'));
+                    else if (gameMode === '3d') combo.forEach(i => { 
+                        document.querySelectorAll('.cube')[i].classList.add('flashing'); 
+                        if(Math.floor(i/9) === activeLayer3D) document.querySelectorAll('.slice-cell')[i%9].classList.add('flashing'); 
+                    });
+                    else if (isUltimateGlobal) combo.forEach(i => document.querySelectorAll('.macro-cell')[i].classList.add('flashing'));
+                }
+            }
+            updateUI(); setTimeout(() => document.getElementById('win-modal').classList.add('active'), 800);
+        }
+
+        function playAgain() { document.getElementById('win-modal').classList.remove('active'); initBoardState(); }
+
+        // --- 3D INTERACTION (DRAG & PINCH) ---
+        let isDragging = false, wasDragging = false, startX, startY, rotX = -20, rotY = -30, scale = 1, prevDiff = -1, evCache = [];
+        const scene = document.getElementById('threed-scene');
+        const cubeWrapper = document.getElementById('threed-cube');
+        
+        scene.addEventListener('pointerdown', e => {
+            evCache.push(e); scene.setPointerCapture(e.pointerId);
+            wasDragging = false;
+            if(evCache.length === 1) { isDragging = true; startX = e.clientX; startY = e.clientY; }
+        });
+        scene.addEventListener('pointermove', e => {
+            const index = evCache.findIndex(ev => ev.pointerId === e.pointerId);
+            if (index !== -1) evCache[index] = e;
+            if (evCache.length === 2) {
+                isDragging = false; wasDragging = true;
+                const curDiff = Math.hypot(evCache[0].clientX - evCache[1].clientX, evCache[0].clientY - evCache[1].clientY);
+                if (prevDiff > 0) {
+                    scale = Math.max(0.5, Math.min(scale + (curDiff - prevDiff) * 0.01, 2.5));
+                    cubeWrapper.style.setProperty('--s', scale);
+                }
+                prevDiff = curDiff;
+            } else if (isDragging) {
+                if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) wasDragging = true;
+                rotY += (e.clientX - startX) * 0.5; rotX -= (e.clientY - startY) * 0.5;
+                cubeWrapper.style.setProperty('--rx', rotX + 'deg'); cubeWrapper.style.setProperty('--ry', rotY + 'deg');
+                startX = e.clientX; startY = e.clientY;
+            }
+        });
+        function pointerUpHandler(e) {
+            evCache = evCache.filter(ev => ev.pointerId !== e.pointerId);
+            if(evCache.length < 2) prevDiff = -1;
+            if(evCache.length === 0) { isDragging = false; setTimeout(() => wasDragging = false, 50); }
+            scene.releasePointerCapture(e.pointerId);
+        }
+        scene.addEventListener('pointerup', pointerUpHandler); scene.addEventListener('pointercancel', pointerUpHandler);
+
+        // --- LIVE EDITING & MODALS ---
+        let tempLiveColor = '';
+        function openLiveEdit(playerKey) {
+            editingPlayerKey = playerKey; tempLiveColor = players[playerKey].color;
+            document.getElementById('live-edit-title').innerText = `Edit ${playerKey === 'X' ? 'Player 1' : 'Player 2'}`;
+            document.getElementById('live-edit-name').value = players[playerKey].name;
+            document.getElementById('live-edit-modal').classList.add('active');
+            setTimeout(() => document.getElementById('live-edit-name').focus(), 100);
+        }
+        function setLiveEditColor(hex) { tempLiveColor = hex; }
+        function closeLiveEdit() { document.getElementById('live-edit-modal').classList.remove('active'); }
+        function saveLiveEdit() {
+            players[editingPlayerKey].name = document.getElementById('live-edit-name').value || players[editingPlayerKey].name;
+            players[editingPlayerKey].color = tempLiveColor;
+            closeLiveEdit(); updateUI();
+        }
+
+        let confirmAction = null;
+        function showConfirmModal(msg, action) {
+            document.getElementById('confirm-message').innerText = msg; confirmAction = action;
+            document.getElementById('confirm-modal').classList.add('active');
+        }
+        function closeConfirmModal() { document.getElementById('confirm-modal').classList.remove('active'); confirmAction = null; }
+        document.getElementById('confirm-yes').onclick = () => { if(confirmAction) confirmAction(); closeConfirmModal(); };
+        
+        function requestRestart() { showConfirmModal("Restart current match?", initBoardState); }
+        function requestChangeMode() { showConfirmModal("Quit match and change mode?", () => window.history.back()); }
+    </script>
+</body>
+</html>
