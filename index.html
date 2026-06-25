@@ -15,6 +15,7 @@
             --color-tt: #4caf50;
             --color-ttr: #00bcd4;
             --color-t3: #9c27b0;
+            --color-rl: #ff5722;
         }
 
         * {
@@ -82,6 +83,7 @@
         .game-card.tt { border-left: 6px solid var(--color-tt); }
         .game-card.ttr { border-left: 6px solid var(--color-ttr); }
         .game-card.t3 { border-left: 6px solid var(--color-t3); }
+        .game-card.rl { border-left: 6px solid var(--color-rl); }
 
         .game-card:hover, .game-card:active {
             transform: translateY(-4px);
@@ -91,6 +93,7 @@
         .game-card.tt:hover, .game-card.tt:active { border-color: var(--color-tt); }
         .game-card.ttr:hover, .game-card.ttr:active { border-color: var(--color-ttr); }
         .game-card.t3:hover, .game-card.t3:active { border-color: var(--color-t3); }
+        .game-card.rl:hover, .game-card.rl:active { border-color: var(--color-rl); }
 
         .game-info h2 {
             font-size: 1.4rem;
@@ -125,8 +128,8 @@
 <body>
 
     <header>
-        <h1>spamfan.github.io</h1>
-        <p>Select a game to start playing</p>
+        <h1>spamfan.github.io/games</h1>
+        <p>Select one below to start playing</p>
     </header>
 
     <main class="grid">
@@ -141,7 +144,7 @@
         <a href="https://spamfan.github.io/ttr" class="game-card ttr">
             <div class="game-info">
                 <h2>Tank Tycoon Reimagined (pre-alpha)</h2>
-                <p>newer iteration of Tank Tycoon, incredibly under developed.</p>
+                <p>newer iteration of Tank Tycoon, incredibly under developed for all platforms.</p>
             </div>
             <div class="arrow">➔</div>
         </a>
@@ -149,7 +152,15 @@
         <a href="https://spamfan.github.io/games/ttt3" class="game-card t3">
             <div class="game-info">
                 <h2>t3³</h2>
-                <p>pass and play tic tac toe and variants with a friend.</p>
+                <p>pass and play tic tac toe and variants with a friend. Runs well on mobile.</p>
+            </div>
+            <div class="arrow">➔</div>
+        </a>
+
+        <a href="https://spamfan.github.io/roguelike" class="game-card rl">
+            <div class="game-info">
+                <h2>Roguelike (pre-alpha)</h2>
+                <p>Strengthening your arsenal after each run will eventually allow you to survive all 100 rooms. In development for all platforms.</p>
             </div>
             <div class="arrow">➔</div>
         </a>
