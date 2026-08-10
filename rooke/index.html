@@ -102,6 +102,20 @@
             position: relative;
         }
 
+        .highlight-move {
+            background-color: rgba(255, 255, 0, 0.4) !important;
+        }
+
+        #arrow-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
         .skeleton {
             width: 100%;
             height: 100%;
@@ -182,7 +196,7 @@
 
     <header>
         <h1><i class="fas fa-chess-rook"></i> Rooke</h1>
-        <span class="version-badge">v0.0.2</span>
+        <span class="version-badge">v0.0.3</span>
     </header>
 
     <main class="layout-container">
@@ -197,6 +211,13 @@
             
             <div class="board-container">
                 <div id="board" class="skeleton"></div>
+                <svg id="arrow-overlay">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="4" markerHeight="4" refX="2.5" refY="2" orient="auto">
+                            <polygon points="0 0, 4 2, 0 4" fill="rgba(37, 99, 235, 0.7)" />
+                        </marker>
+                    </defs>
+                </svg>
             </div>
 
             <div class="controls">
@@ -335,7 +356,57 @@
                 
                 const currentFen = tempGame.fen();
                 this.board.position(currentFen, false); // false = no animation for instant snappy feel
+                
+                this.highlightLastMove(tempGame);
+                this.clearArrow();
+                
                 this.analyzePosition(currentFen, tempGame.turn());
+            }
+
+            // --- Visual Enhancements ---
+            highlightLastMove(gameInstance) {
+                $('.highlight-move').removeClass('highlight-move');
+                const history = gameInstance.history({ verbose: true });
+                if (history.length > 0) {
+                    const lastMove = history[history.length - 1];
+                    $('.square-' + lastMove.from).addClass('highlight-move');
+                    $('.square-' + lastMove.to).addClass('highlight-move');
+                }
+            }
+
+            clearArrow() {
+                $('#arrow-overlay').find('line').remove();
+            }
+
+            drawArrow(bestMoveStr) {
+                this.clearArrow();
+                if (!bestMoveStr || bestMoveStr.length < 4) return;
+                
+                const fromSq = bestMoveStr.substring(0, 2);
+                const toSq = bestMoveStr.substring(2, 4);
+                
+                // Map a-h and 1-8 to grid coordinates (0-7)
+                const files = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7 };
+                const ranks = { '1': 7, '2': 6, '3': 5, '4': 4, '5': 3, '6': 2, '7': 1, '8': 0 }; 
+
+                const boardEl = $('#board');
+                const squareSize = boardEl.width() / 8;
+                
+                const x1 = (files[fromSq[0]] * squareSize) + (squareSize / 2);
+                const y1 = (ranks[fromSq[1]] * squareSize) + (squareSize / 2);
+                const x2 = (files[toSq[0]] * squareSize) + (squareSize / 2);
+                const y2 = (ranks[toSq[1]] * squareSize) + (squareSize / 2);
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('stroke', 'rgba(37, 99, 235, 0.7)'); // Colorblind safe blue
+                line.setAttribute('stroke-width', squareSize * 0.15);
+                line.setAttribute('marker-end', 'url(#arrowhead)');
+                
+                document.getElementById('arrow-overlay').appendChild(line);
             }
 
             // Requests analysis from Stockfish
@@ -379,6 +450,7 @@
                     const match = line.match(/bestmove\s+(\S+)/);
                     if (match && match[1] !== '(none)') {
                         this.ui.bestMoveText.text(`Best: ${match[1]}`);
+                        this.drawArrow(match[1]);
                     } else {
                         this.ui.bestMoveText.text(`Best: -`);
                     }
