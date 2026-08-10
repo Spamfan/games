@@ -47,7 +47,8 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
-        header h1 { font-size: 1.5rem; color: var(--primary-color); }
+        header h1 { font-size: 1.5rem; color: var(--primary-color); display: flex; align-items: center; gap: 8px; }
+        .app-logo { height: 32px; width: auto; }
         .version-badge {
             background: var(--bg-color);
             padding: 4px 8px;
@@ -91,7 +92,23 @@
 
         .engine-eval { font-size: 1.2rem; color: var(--text-main); }
         .best-move { color: var(--text-muted); font-size: 0.9rem; }
-        .spinner { color: var(--primary-color); display: none; }
+        .spinner { 
+            width: 20px; height: 20px; 
+            border: 3px solid var(--border-color); 
+            border-top-color: var(--primary-color); 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+            display: none; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Dev Tools & UI States */
+        .dev-trigger { position: fixed; bottom: 8px; right: 8px; font-size: 0.7rem; color: #d1d5db; cursor: pointer; text-decoration: none; z-index: 50; }
+        .dev-trigger:hover { color: #9ca3af; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: var(--surface-color); padding: var(--spacing-lg); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: var(--spacing-md); width: 90%; max-width: 300px; text-align: center; }
+        .modal-content a { text-decoration: none; }
+        #active-game-area { display: none; text-align: center; }
 
         /* Board Container & Skeletons */
         .board-container {
@@ -195,8 +212,8 @@
 <body>
 
     <header>
-        <h1><i class="fas fa-chess-rook"></i> Rooke</h1>
-        <span class="version-badge">v0.0.3</span>
+        <h1><img src="logo.png" alt="Rooke Logo" class="app-logo"> Rooke</h1>
+        <span class="version-badge">v0.0.4</span>
     </header>
 
     <main class="layout-container">
@@ -206,7 +223,7 @@
             <div class="engine-bar">
                 <div class="engine-eval" id="eval-text">Eval: 0.00</div>
                 <div class="best-move" id="best-move-text">Best: -</div>
-                <i class="fas fa-spinner fa-spin spinner" id="engine-spinner"></i>
+                <div class="spinner" id="engine-spinner"></div>
             </div>
             
             <div class="board-container">
@@ -230,11 +247,28 @@
 
         <!-- Right/Bottom Column: Input & Analysis -->
         <section class="analysis-section">
-            <textarea id="pgn-input" placeholder="Paste PGN here..."></textarea>
-            <button id="btn-analyze" class="primary"><i class="fas fa-search" style="margin-right: 8px;"></i> Analyze Game</button>
+            <div id="input-area">
+                <textarea id="pgn-input" placeholder="Paste PGN here..."></textarea>
+                <button id="btn-analyze" class="primary"><i class="fas fa-search" style="margin-right: 8px;"></i> Analyze Game</button>
+            </div>
+            <div id="active-game-area">
+                <button id="btn-new-game"><i class="fas fa-plus" style="margin-right: 8px;"></i> Analyze Another Game</button>
+            </div>
         </section>
 
     </main>
+
+    <!-- Dev Tools Modal -->
+    <a href="#" class="dev-trigger" id="dev-trigger">dev</a>
+    <div class="modal-overlay" id="dev-modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 8px;">Developer Tools</h3>
+            <a href="https://github.com/Spamfan/games/upload/main/rooke" target="_blank"><button class="primary">Publish New Version</button></a>
+            <a href="https://raw.githubusercontent.com/spamfan/games/main/rooke/index.html" target="_blank"><button>Download Latest</button></a>
+            <a href="https://spamfan.github.io/patcher" target="_blank"><button>Patcher</button></a>
+            <button id="close-dev-modal" style="margin-top: 8px;">Close</button>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -252,6 +286,8 @@
                 this.game = new Chess(); // Full game state tracker
                 this.history = [];       // Array of moves
                 this.currentMoveIndex = 0;
+                this.evalCache = {};     // Engine evaluation memory
+                this.currentAnalysisFen = null;
                 
                 // UI Elements
                 this.ui = {
@@ -259,7 +295,9 @@
                     pgnInput: $('#pgn-input'),
                     evalText: $('#eval-text'),
                     bestMoveText: $('#best-move-text'),
-                    spinner: $('#engine-spinner')
+                    spinner: $('#engine-spinner'),
+                    inputArea: $('#input-area'),
+                    activeGameArea: $('#active-game-area')
                 };
 
                 this.engine = null;
@@ -282,7 +320,8 @@
                 const config = {
                     pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
                     position: 'start',
-                    showNotation: true
+                    showNotation: true,
+                    moveSpeed: 'fast'
                 };
                 this.board = Chessboard('board', config);
                 
@@ -293,10 +332,21 @@
             // Set up UI interactions
             bindEvents() {
                 $('#btn-analyze').on('click', () => this.loadPGN(this.ui.pgnInput.val()));
+                $('#btn-new-game').on('click', () => {
+                    this.ui.inputArea.show();
+                    this.ui.activeGameArea.hide();
+                    this.ui.pgnInput.val('');
+                });
+                
                 $('#btn-start').on('click', () => this.goToMove(0));
                 $('#btn-prev').on('click', () => this.goToMove(this.currentMoveIndex - 1));
                 $('#btn-next').on('click', () => this.goToMove(this.currentMoveIndex + 1));
                 $('#btn-end').on('click', () => this.goToMove(this.history.length));
+
+                // Dev Tools Interactions
+                $('#dev-trigger').on('click', (e) => { e.preventDefault(); $('#dev-modal').css('display', 'flex'); });
+                $('#close-dev-modal').on('click', () => $('#dev-modal').hide());
+                $('#dev-modal').on('click', (e) => { if (e.target.id === 'dev-modal') $('#dev-modal').hide(); });
             }
 
             // Initialize Stockfish via Web Worker safely (bypassing CORS limits on local files)
@@ -330,6 +380,9 @@
                     this.history = this.game.history();
                     this.currentMoveIndex = 0;
                     
+                    this.ui.inputArea.hide();
+                    this.ui.activeGameArea.show();
+                    
                     this.saveToStorage(sanitizedPgn, this.currentMoveIndex);
                     this.updateBoardState();
                 } else {
@@ -350,17 +403,26 @@
             // Syncs the visual board with the logical move index
             updateBoardState() {
                 const tempGame = new Chess();
+                const evalGame = new Chess(); // Game state for hindsight evaluation
+                
                 for (let i = 0; i < this.currentMoveIndex; i++) {
                     tempGame.move(this.history[i]);
+                    if (i < this.currentMoveIndex - 1) {
+                        evalGame.move(this.history[i]);
+                    }
                 }
                 
                 const currentFen = tempGame.fen();
-                this.board.position(currentFen, false); // false = no animation for instant snappy feel
+                this.board.position(currentFen, true); // true = smooth fast animation
                 
                 this.highlightLastMove(tempGame);
                 this.clearArrow();
                 
-                this.analyzePosition(currentFen, tempGame.turn());
+                // Hindsight Analysis: Evaluate the position *before* the last move was made
+                const fenToAnalyze = (this.currentMoveIndex > 0) ? evalGame.fen() : currentFen;
+                const turnToAnalyze = (this.currentMoveIndex > 0) ? evalGame.turn() : tempGame.turn();
+                
+                this.analyzePosition(fenToAnalyze, turnToAnalyze);
             }
 
             // --- Visual Enhancements ---
@@ -413,15 +475,26 @@
             analyzePosition(fen, turn) {
                 if (!this.engineReady) return;
                 
+                this.currentAnalysisFen = fen;
+                this.currentTurn = turn; // Store turn to adjust evaluation relative to White
+                
+                // Check Cache first
+                if (this.evalCache[fen]) {
+                    this.ui.evalText.text(this.evalCache[fen].evalText);
+                    this.ui.bestMoveText.text(this.evalCache[fen].bestMoveText);
+                    if (this.evalCache[fen].bestMove) {
+                        this.drawArrow(this.evalCache[fen].bestMove);
+                    }
+                    this.ui.spinner.hide();
+                    return;
+                }
+                
                 this.ui.spinner.show();
                 this.ui.bestMoveText.text("Thinking...");
                 
                 this.engine.postMessage('stop');
                 this.engine.postMessage(`position fen ${fen}`);
                 this.engine.postMessage('go depth 12'); // Fast evaluation for snappiness
-                
-                // Store turn to adjust evaluation relative to White
-                this.currentTurn = turn; 
             }
 
             // Parses engine output for Evaluation and Best Move
@@ -448,12 +521,25 @@
                 // Parse Best Move
                 if (line.includes('bestmove')) {
                     const match = line.match(/bestmove\s+(\S+)/);
+                    let bestMoveStr = null;
+                    
                     if (match && match[1] !== '(none)') {
-                        this.ui.bestMoveText.text(`Best: ${match[1]}`);
-                        this.drawArrow(match[1]);
+                        bestMoveStr = match[1];
+                        this.ui.bestMoveText.text(`Best: ${bestMoveStr}`);
+                        this.drawArrow(bestMoveStr);
                     } else {
                         this.ui.bestMoveText.text(`Best: -`);
                     }
+                    
+                    // Save to Cache
+                    if (this.currentAnalysisFen) {
+                        this.evalCache[this.currentAnalysisFen] = {
+                            evalText: this.ui.evalText.text(),
+                            bestMoveText: this.ui.bestMoveText.text(),
+                            bestMove: bestMoveStr
+                        };
+                    }
+                    
                     this.ui.spinner.hide(); // Hide spinner when engine finishes
                 }
             }
@@ -476,6 +562,10 @@
                         this.game = tempGame;
                         this.history = this.game.history();
                         this.currentMoveIndex = savedIndex !== null ? parseInt(savedIndex, 10) : 0;
+                        
+                        this.ui.inputArea.hide();
+                        this.ui.activeGameArea.show();
+                        
                         this.updateBoardState();
                     }
                 }
