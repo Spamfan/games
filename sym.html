@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codebase Byte Breakdown</title>
+  <!-- Load Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #f4f4f9;
+    }
+    .chart-container {
+      width: 100%;
+      max-width: 600px;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chart-container">
+    <canvas id="myPieChart"></canvas>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('myPieChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: [
+          'PDF Engine & Layout Logic',
+          'CSS Stylesheet',
+          'UI Event Logic & Modals',
+          'Tutorial & FAQ HTML',
+          'Data Fetching & State',
+          'HTML Layout Shell'
+        ],
+        datasets: [{
+          data: [28, 23, 18, 15, 10, 6],
+          backgroundColor: [
+            '#ff6384',
+            '#36a2eb',
+            '#cc65fe',
+            '#ffce56',
+            '#4bc0c0',
+            '#9966ff'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Codebase Byte Breakdown',
+            font: { size: 18 }
+          },
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
