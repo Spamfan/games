@@ -3,278 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Basic FPS Foundation v0.1.0</title>
+    <title>Spamfan Games</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-            background-color: #000;
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --card-hover: #2a2a2a;
+            
+            /* Game Accent Colors */
+            --color-tt: #4caf50;
+            --color-ttr: #00bcd4;
+            --color-t3: #9c27b0;
+            --color-rl: #ff5722;
         }
-        #blocker {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            color: white;
-            z-index: 10;
+            justify-content: center;
+            padding: 20px;
         }
-        #instructions {
+
+        header {
             text-align: center;
-            cursor: pointer;
+            margin-bottom: 40px;
         }
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 5;
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, var(--color-ttr), var(--color-t3));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        .crosshair-line {
-            position: absolute;
-            background-color: rgba(255, 255, 255, 0.8);
+
+        header p {
+            color: #888;
+            font-size: 1rem;
         }
-        .horizontal { top: 9px; left: 0; width: 20px; height: 2px; }
-        .vertical { top: 0; left: 9px; width: 2px; height: 20px; }
+
+        .grid {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .game-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--card-bg);
+            text-decoration: none;
+            color: var(--text-color);
+            padding: 24px;
+            border-radius: 16px;
+            border: 2px solid transparent;
+            min-height: 120px;
+            transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.2s, background-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Card Specific Borders & Interactions */
+        .game-card.tt { border-left: 6px solid var(--color-tt); }
+        .game-card.ttr { border-left: 6px solid var(--color-ttr); }
+        .game-card.t3 { border-left: 6px solid var(--color-t3); }
+        .game-card.rl { border-left: 6px solid var(--color-rl); }
+
+        .game-card:hover, .game-card:active {
+            transform: translateY(-4px);
+            background-color: var(--card-hover);
+        }
+
+        .game-card.tt:hover, .game-card.tt:active { border-color: var(--color-tt); }
+        .game-card.ttr:hover, .game-card.ttr:active { border-color: var(--color-ttr); }
+        .game-card.t3:hover, .game-card.t3:active { border-color: var(--color-t3); }
+        .game-card.rl:hover, .game-card.rl:active { border-color: var(--color-rl); }
+
+        .game-info h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .game-info p {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .arrow {
+            font-size: 1.5rem;
+            color: #666;
+            transition: transform 0.2s;
+            padding-left: 10px;
+        }
+
+        .game-card:hover .arrow {
+            transform: translateX(4px);
+            color: #fff;
+        }
+
+        @media (max-width: 480px) {
+            header h1 { font-size: 2rem; }
+            .game-card { padding: 20px; min-height: 100px; }
+            .game-info h2 { font-size: 1.2rem; }
+        }
     </style>
 </head>
 <body>
-    <div id="blocker">
-        <div id="instructions">
-            <p style="font-size:36px; font-weight: bold;">Click to Play</p>
-            <p>WASD = Move | SPACE = Jump | MOUSE = Look | LEFT CLICK = Shoot</p>
-        </div>
-    </div>
-    
-    <div id="crosshair">
-        <div class="crosshair-line horizontal"></div>
-        <div class="crosshair-line vertical"></div>
-    </div>
 
-    <!-- Import maps polyfill -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
+    <header>
+        <h1>spamfan.github.io/games</h1>
+        <p>Select one below to start playing</p>
+    </header>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+    <main class="grid">
+        <a href="https://spamfan.github.io/tanktycoon" class="game-card tt">
+            <div class="game-info">
+                <h2>Tank Tycoon</h2>
+                <p>top down tycoon shooting game built for Windows, android, and high end iOS devices.</p>
+            </div>
+            <div class="arrow">➔</div>
+        </a>
 
-        // MULTIPLAYER STATE (Future-proofing)
-        const playerState = {
-            position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0 },
-            isShooting: false
-        };
+        <a href="https://spamfan.github.io/ttr" class="game-card ttr">
+            <div class="game-info">
+                <h2>Tank Tycoon Reimagined (pre-alpha)</h2>
+                <p>newer iteration of Tank Tycoon, incredibly under developed for all platforms.</p>
+            </div>
+            <div class="arrow">➔</div>
+        </a>
 
-        let camera, scene, renderer, controls;
-        const objects = []; // Targets
-        
-        let raycaster;
-        let moveForward = false;
-        let moveBackward = false;
-        let moveLeft = false;
-        let moveRight = false;
-        let canJump = false;
+        <a href="https://spamfan.github.io/games/ttt3" class="game-card t3">
+            <div class="game-info">
+                <h2>t3³</h2>
+                <p>pass and play tic tac toe and variants with a friend. Runs well on mobile.</p>
+            </div>
+            <div class="arrow">➔</div>
+        </a>
 
-        let prevTime = performance.now();
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
+        <a href="https://spamfan.github.io/roguelike" class="game-card rl">
+            <div class="game-info">
+                <h2>Roguelike (pre-alpha)</h2>
+                <p>Strengthening your arsenal after each run will eventually allow you to survive all 100 rooms. In development for all platforms.</p>
+            </div>
+            <div class="arrow">➔</div>
+        </a>
+    </main>
 
-        init();
-        animate();
-
-        function init() {
-            // Camera setup
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.y = 1.6; // Average eye height
-
-            // Scene setup
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb); // Sky blue
-            scene.fog = new THREE.Fog(0x87ceeb, 0, 750);
-
-            // Lighting
-            const light = new THREE.HemisphereLight(0xeeeeff, 0x777788, 0.75);
-            light.position.set(0.5, 1, 0.75);
-            scene.add(light);
-
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-            dirLight.position.set(20, 20, 20);
-            scene.add(dirLight);
-
-            // Controls setup
-            controls = new PointerLockControls(camera, document.body);
-            const blocker = document.getElementById('blocker');
-            const instructions = document.getElementById('instructions');
-
-            instructions.addEventListener('click', function () {
-                controls.lock();
-            });
-
-            controls.addEventListener('lock', function () {
-                instructions.style.display = 'none';
-                blocker.style.display = 'none';
-            });
-
-            controls.addEventListener('unlock', function () {
-                blocker.style.display = 'flex';
-                instructions.style.display = '';
-            });
-            scene.add(controls.getObject());
-
-            // Key listeners
-            const onKeyDown = function (event) {
-                switch (event.code) {
-                    case 'ArrowUp':
-                    case 'KeyW': moveForward = true; break;
-                    case 'ArrowLeft':
-                    case 'KeyA': moveLeft = true; break;
-                    case 'ArrowDown':
-                    case 'KeyS': moveBackward = true; break;
-                    case 'ArrowRight':
-                    case 'KeyD': moveRight = true; break;
-                    case 'Space':
-                        if (canJump === true) velocity.y += 350;
-                        canJump = false;
-                        break;
-                }
-            };
-
-            const onKeyUp = function (event) {
-                switch (event.code) {
-                    case 'ArrowUp':
-                    case 'KeyW': moveForward = false; break;
-                    case 'ArrowLeft':
-                    case 'KeyA': moveLeft = false; break;
-                    case 'ArrowDown':
-                    case 'KeyS': moveBackward = false; break;
-                    case 'ArrowRight':
-                    case 'KeyD': moveRight = false; break;
-                }
-            };
-
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-
-            raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, - 1, 0), 0, 10);
-
-            // Create Floor
-            const floorGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
-            floorGeometry.rotateX(- Math.PI / 2);
-            const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x556B2F }); // Dark olive green
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            scene.add(floor);
-
-            // Create Target Crates
-            const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
-            for (let i = 0; i < 50; i++) {
-                const boxMaterial = new THREE.MeshPhongMaterial({ color: 0x8b4513 }); // Saddle brown
-                const box = new THREE.Mesh(boxGeometry, boxMaterial);
-                box.position.x = Math.floor(Math.random() * 20 - 10) * 4;
-                box.position.y = 1;
-                box.position.z = Math.floor(Math.random() * 20 - 10) * 4;
-                scene.add(box);
-                objects.push(box);
-            }
-
-            // Shooting mechanism
-            window.addEventListener('mousedown', (e) => {
-                if(controls.isLocked && e.button === 0) { // Left click
-                    playerState.isShooting = true;
-                    shoot();
-                    // Reset state quickly for future multiplayer broadcast
-                    setTimeout(() => playerState.isShooting = false, 100); 
-                }
-            });
-
-            // Renderer setup
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            window.addEventListener('resize', onWindowResize);
-        }
-
-        function shoot() {
-            const shootRaycaster = new THREE.Raycaster();
-            shootRaycaster.setFromCamera(new THREE.Vector2(0, 0), camera); // Center of screen
-            
-            const intersects = shootRaycaster.intersectObjects(objects, false);
-            if (intersects.length > 0) {
-                // Hit target! Make it red
-                intersects[0].object.material.color.setHex(0xff0000);
-            }
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            const time = performance.now();
-
-            if (controls.isLocked === true) {
-                // Downward raycaster for floor collision
-                raycaster.ray.origin.copy(controls.getObject().position);
-                raycaster.ray.origin.y -= 1.6; 
-
-                const delta = (time - prevTime) / 1000;
-
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
-
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize(); // Ensures consistent movements in all directions
-
-                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
-
-                controls.moveRight(- velocity.x * delta);
-                controls.moveForward(- velocity.z * delta);
-
-                controls.getObject().position.y += (velocity.y * delta); // Gravity behavior
-
-                // Floor boundary
-                if (controls.getObject().position.y < 1.6) {
-                    velocity.y = 0;
-                    controls.getObject().position.y = 1.6;
-                    canJump = true;
-                }
-
-                // Update Player State for future Multiplayer
-                playerState.position.x = controls.getObject().position.x;
-                playerState.position.y = controls.getObject().position.y;
-                playerState.position.z = controls.getObject().position.z;
-                
-                // Extract euler rotation for pitch/yaw
-                const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-                playerState.rotation.y = euler.y; // Yaw
-                playerState.rotation.x = euler.x; // Pitch
-            }
-
-            prevTime = time;
-            renderer.render(scene, camera);
-        }
-    </script>
 </body>
 </html>
