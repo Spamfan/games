@@ -182,7 +182,7 @@
 
     <header>
         <h1><i class="fas fa-chess-rook"></i> Rooke</h1>
-        <span class="version-badge">v0.0.1</span>
+        <span class="version-badge">v0.0.2</span>
     </header>
 
     <main class="layout-container">
@@ -300,13 +300,16 @@
             loadPGN(pgnString) {
                 if (!pgnString || pgnString.trim() === '') return;
 
+                // Sanitize PGN: Ensure a double newline between the last metadata bracket ']' and the first move '1.'
+                const sanitizedPgn = pgnString.replace(/\]\s*(1\.)/, ']\n\n$1');
+
                 const tempGame = new Chess();
-                if (tempGame.load_pgn(pgnString)) {
+                if (tempGame.load_pgn(sanitizedPgn)) {
                     this.game = tempGame;
                     this.history = this.game.history();
                     this.currentMoveIndex = 0;
                     
-                    this.saveToStorage(pgnString, this.currentMoveIndex);
+                    this.saveToStorage(sanitizedPgn, this.currentMoveIndex);
                     this.updateBoardState();
                 } else {
                     alert("Invalid PGN format. Please check your text and try again.");
